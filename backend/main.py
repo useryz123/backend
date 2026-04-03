@@ -1,22 +1,28 @@
 """
 简化版待办事项 API
 """
+import os
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime, timedelta, timezone
+from typing import Optional, List
+import jwt
+from passlib.context import CryptContext
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.sql import func
+
 """
 修改数据库连接部分
 """
-import os
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from datetime import datetime, timedelta
-from typing import Optional, List
-import jwt
-import hashlib
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.sql import func
+
+# ==================== 配置 ====================
+SECRET_KEY = "your-secret-key-change-this-in-production"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # ==================== 数据库配置 ====================
 # 从环境变量获取数据库URL，没有则用SQLite（开发用）
@@ -39,21 +45,22 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Todo(Base):
     __tablename__ = "todos"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)  # PostgreSQL 用 Text
+    description = Column(String(1000), nullable=True)
     is_completed = Column(Boolean, default=False)
-    priority = Column(Integer, default=2)
+    priority = Column(Integer, default=2)  # 1=低, 2=中, 3=高
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    user_id = Column(Integer, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
 # 创建表
 Base.metadata.create_all(bind=engine)
+
 
 # ==================== 密码工具 ====================
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

@@ -1,27 +1,35 @@
 """
 简化版待办事项 API
 """
+"""
+修改数据库连接部分
+"""
+import os
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict
-from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel
+from datetime import datetime, timedelta
 from typing import Optional, List
 import jwt
-from passlib.context import CryptContext
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import declarative_base
+import hashlib
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.sql import func
 
-# ==================== 配置 ====================
-SECRET_KEY = "your-secret-key-change-this-in-production"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-DATABASE_URL = "sqlite:///./todos.db"
+# ==================== 数据库配置 ====================
+# 从环境变量获取数据库URL，没有则用SQLite（开发用）
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# ==================== 数据库设置 ====================
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    # Railway 提供的 PostgreSQL
+    engine = create_engine(DATABASE_URL)
+else:
+    # 开发环境用 SQLite
+    DATABASE_URL = "sqlite:///./todo.db"
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -31,18 +39,18 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Todo(Base):
     __tablename__ = "todos"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
-    description = Column(String(1000), nullable=True)
+    description = Column(Text, nullable=True)  # PostgreSQL 用 Text
     is_completed = Column(Boolean, default=False)
-    priority = Column(Integer, default=2)  # 1=低, 2=中, 3=高
+    priority = Column(Integer, default=2)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, nullable=False)
 
 # 创建表
 Base.metadata.create_all(bind=engine)

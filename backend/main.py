@@ -28,14 +28,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # 从环境变量获取数据库URL，没有则用SQLite（开发用）
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# 修复逻辑：兼容 Railway 的 postgres:// 格式
-if DATABASE_URL:
-    # 关键修复：将常见的 postgres:// 替换为 SQLAlchemy 需要的 postgresql://
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    # Railway 提供的 PostgreSQL
     engine = create_engine(DATABASE_URL)
 else:
-    # 仅在本地开发时使用 SQLite
+    # 开发环境用 SQLite
     DATABASE_URL = "sqlite:///./todo.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 

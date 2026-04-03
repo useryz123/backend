@@ -146,7 +146,7 @@ app = FastAPI(title="待办事项 API", version="1.0")
 # 添加 CORS 中间件（允许前端访问）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

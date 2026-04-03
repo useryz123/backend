@@ -4,4 +4,5 @@ pydantic==2.12.4
 PyJWT==2.10.1
 SQLAlchemy==2.0.48
 uvicorn[standard]==0.42.0
+python-multipart==0.0.22
 psycopg2-binary>=2.9.0  # 添加这一行

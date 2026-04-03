@@ -158,10 +158,15 @@ def authenticate_user(db: Session, username: str, password: str):
 # ==================== 创建 FastAPI 应用 ====================
 app = FastAPI(title="待办事项 API", version="1.0")
 
+# 读取允许的域名
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",")
+if not allowed_origins[0]:  # 如果为空
+    allowed_origins = ["http://localhost:5500"]
+    
 # 添加 CORS 中间件（允许前端访问）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
